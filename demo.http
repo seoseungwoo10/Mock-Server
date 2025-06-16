@@ -1,0 +1,72 @@
+###
+# 시나리오 1: 기본 규칙 매칭 (동기 응답)
+# 주민번호가 '880101-1'로 시작하는 사용자의 한도 조회를 요청합니다.
+# 서버는 즉시 한도와 금리가 포함된 응답을 반환해야 합니다.
+POST http://localhost:9090/api/v1/limits
+Content-Type: application/json
+
+{
+  "userName": "이승건",
+  "userRegistrationNumber": "880101-1234567"
+}
+
+###
+# 시나리오 2: 비동기 응답 규칙 매칭 (예약)
+# 주민번호가 '950202-2'로 시작하는 사용자의 한도 조회를 요청합니다.
+# 서버는 즉시 202 Accepted 응답을 주고, 3초 뒤에 지정된 webhookUrl로 최종 결과를 보냅니다.
+#
+# !!주의!!: 아래 YOUR_WEBHOOK_URL을 실제 테스트용 Webhook URL로 변경하세요.
+# (예: https://webhook.site/...)
+POST http://localhost:9090/api/v1/limits
+Content-Type: application/json
+
+{
+  "userName": "박토스",
+  "userRegistrationNumber": "950202-2345678",
+  "webhookUrl": "https://webhook.site/d8347199-3b06-4e81-bad3-53bfef3f7fda"
+}
+
+###
+# 시나리오 3: 규칙 미매칭 (Relay 서버 역할)
+# 설정된 규칙에 맞지 않는 요청을 보내 Relay 기능이 동작하는지 테스트합니다.
+# relay.enabled=true인 경우, 요청은 relay.target-url로 전달됩니다.
+POST http://localhost:9090/api/v1/limits
+Content-Type: application/json
+
+{
+  "userName": "김릴레이",
+  "userRegistrationNumber": "000101-3456789"
+}
+
+###
+# 시나리오 4: API로 새로운 규칙 추가하기
+# '김토스'라는 사용자에 대해 429 Too Many Requests 응답을 반환하는 규칙을 동적으로 추가합니다.
+POST http://localhost:9090/api/v1/mock-configs
+Content-Type: application/json
+
+{
+  "ruleName": "Block-User-KimToss",
+  "userName": "김토스",
+  "response": {
+    "customHeaders": {
+      "X-Rate-Limit-Reset": "3600"
+    },
+    "httpStatus": 429
+  }
+}
+
+###
+# 시나리오 5: 새로 추가한 규칙 테스트하기
+# 방금 추가한 'Block-User-KimToss' 규칙이 정상적으로 동작하는지 확인합니다.
+POST http://localhost:9090/api/v1/limits
+Content-Type: application/json
+
+{
+  "userName": "김토스",
+  "userRegistrationNumber": "991212-1231231"
+}
+
+###
+# 시나리오 6: 현재 모든 규칙 목록 조회하기
+# Mock 서버에 현재 설정된 모든 규칙 목록을 조회합니다.
+GET http://localhost:9090/api/v1/mock-configs
